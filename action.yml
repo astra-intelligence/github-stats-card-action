@@ -1,0 +1,48 @@
+name: 'GitHub Stats Card'
+description: 'Generate a beautiful, live-updating GitHub profile stats card (stars, followers, repos, top language) using the GitHub Stats Card API. Replaces broken github-readme-stats cards.'
+author: 'astra-intelligence'
+branding:
+  icon: 'bar-chart-2'
+  color: 'green'
+
+inputs:
+  username:
+    description: 'Your GitHub username'
+    required: true
+  theme:
+    description: 'Card theme: dark, light, ocean, sunset, forest, midnight, copper, plasma'
+    required: false
+    default: 'dark'
+  license_key:
+    description: 'Optional Gumroad license key for premium themes and no watermark'
+    required: false
+    default: ''
+  filename:
+    description: 'Output filename for the SVG'
+    required: false
+    default: 'github-stats-card.svg'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate GitHub Stats Card
+      shell: bash
+      run: |
+        URL="https://167.233.135.161:8083/card?user=${{ inputs.username }}&theme=${{ inputs.theme }}"
+        if [ -n "${{ inputs.license_key }}" ]; then
+          URL="$URL&key=${{ inputs.license_key }}"
+        fi
+        echo "Fetching stats card for ${{ inputs.username }}..."
+        curl -s -o "${{ inputs.filename }}" "$URL"
+        echo "Stats card saved to ${{ inputs.filename }}"
+
+    - name: Commit stats card
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.filename }}" ]; then
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.filename }}"
+          git diff --quiet && git diff --staged --quiet || \
+            (git commit -m "Update GitHub stats card" && git push)
+        fi
